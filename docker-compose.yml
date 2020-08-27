@@ -1,63 +1,72 @@
-version: "2"
+version: '3.2'
 
 services:
-  # brocker
-  redis:
-    image: redis:6.0.6
-    container_name: redis
-    ports:
-      - 6379:6379
-    volumes:
-      - redis-data:/data
-    networks:
-      - logging
-  # index, search & agregation
   elasticsearch:
-    image: elasticsearch:7.9.0
-    container_name: elastic
-    environment:
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
     ports:
-      - 9200:9200
-      - 9300:9300
-    volumes:
-      - $PWD/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - "es-data:/usr/share/elasticsearch/data"
-    networks:
-      - logging
-  # UI
-  kibana:
-    image: kibana:7.9.0
-    container_name: kibana
-    ports:
-      - 5601:5601
-    volumes:
-      - $PWD/kibana/config/kibana.yml:/etc/kibana/kibana.yml
-    networks:
-      - logging
-    depends_on:
-      - elasticsearch
-  # indexer
-  logstash:
-    image: logstash:7.9.0
-    container_name: logstash
-    command: logstash -f /config/
+      - "9200:9200"
+      - "9300:9300"
     environment:
-      - JAVA_OPTS=-Xms1g -Xmx1g
-    volumes:
-      - $PWD/logstash/config:/config
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: changeme
     networks:
-      - logging
-    depends_on:
-      - elasticsearch
-      - redis
+      - elk
 
-volumes:
-  es-data:
-    driver: local
-  redis-data:
-    driver: local
+  logstash:
+    build:
+      context: logstash/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
 
 networks:
-  logging:
+  elk:
     driver: bridge
+
+volumes:
+  elasticsearch:
