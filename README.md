@@ -1,22 +1,39 @@
 ELK stack from scratch, with Docker
 ===================================
 
-## Run (stack)
-```
-  # run (daemon)
-  docker-compose up -d
-  # show logs
-  docker-compose logs -f
-```
+## Install Docker
 
-## Run the webapp to monitor
-```
-  docker build ./webapp -t dockerelkstack_webapp
-  docker run --network dockerelkstack_logging --link redis:redis -p 80:80 -d --name webapp dockerelkstack_webapp
-```
-Then navigate on the site (port 80, source: https://github.com/sbilly/joli-admin)
+$ sudo apt-get update
 
-## Index management with curator
-```
-  docker run --network dockerelkstack_logging --link elastic:elasticsearch -v "$PWD/curator/config":/config --rm bobrik/curator:4.0.4 --config /config/config.yml /config/actions.yml
-```
+$ sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+    
+$ curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+
+
+
+$ sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+
+$ sudo apt-get update
+ $ sudo apt-get install docker-ce docker-ce-cli containerd.io
+ 
+## Install compose
+
+$ sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+$ sudo chmod +x /usr/local/bin/docker-compose
+$ sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+## Deployment
+
+$ sudo systemctl start docker
+$ sudo systemctl enable docker
+$ cd elk-cec-docker
+$ docker-compose build
+$ docker-compose up -d
